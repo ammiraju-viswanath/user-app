@@ -12,12 +12,16 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.PastOrPresent;
 import javax.validation.constraints.Size;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name="user_table")
 @Data
-public class User {
+@Builder@NoArgsConstructor @AllArgsConstructor
+public class User   {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private Integer id;

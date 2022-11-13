@@ -42,7 +42,7 @@ public class UserApiTest {
 
 
 	private final HttpHeaders headers = new HttpHeaders();
-	private final User user = new User();
+	private final User user = User.builder().build();
 
 	public URI loaduri(String uri) {
 		return URI.create(String.format("http://localhost:%s%s", port, uri));
