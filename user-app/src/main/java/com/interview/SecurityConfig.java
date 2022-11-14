@@ -27,18 +27,18 @@ public class SecurityConfig {
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
 		return http
 				.csrf().disable()
+
 				.authorizeHttpRequests()
 				.antMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
 				.antMatchers(HttpMethod.GET, "/users", "/users/**").hasAnyRole("ADMIN", "USER")
+				.antMatchers(HttpMethod.GET, "/v1/users").authenticated()
 				.antMatchers("/users/**").hasRole("ADMIN")
 				.antMatchers("/", "/h2-console/**").permitAll()
 				.anyRequest().permitAll()
-				.and()
-				.headers().frameOptions().disable()
+
+				.and().headers().frameOptions().disable()
 				.and().httpBasic()
-				//.and().oauth2Login()
-				.and()
-				.build();
+				.and().build();
 	}
 
 	@Bean
