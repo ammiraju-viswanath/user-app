@@ -1,9 +1,8 @@
 package com.interview;
 
-
-
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +23,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.interview.model.Address;
+import com.interview.model.Name;
 import com.interview.model.User;
 
 @RunWith(SpringRunner.class)
@@ -34,15 +35,17 @@ public class UserApiTest {
 	@LocalServerPort
 	private int port;
 
-	private final TestRestTemplate restTempWithAdmin = new  TestRestTemplate()
-			.withBasicAuth("springer", "secret");
+	private final TestRestTemplate restTempWithAdmin = new TestRestTemplate().withBasicAuth("springer", "secret");
 
-	private final TestRestTemplate restTempWithUser = new  TestRestTemplate()
-			.withBasicAuth("spring", "secret");
-
+	private final TestRestTemplate restTempWithUser = new TestRestTemplate().withBasicAuth("spring", "secret");
 
 	private final HttpHeaders headers = new HttpHeaders();
 	private final User user = User.builder().build();
+	private final Name name = Name.builder().firstName("firstName").secondName("secondName").build();
+	private final Address address1 = Address.builder().line1("address1-1").line2("address2-1").line3("address3-1")
+			.line4("address4-1").postcode("postcode-1").build();
+	private final Address address2 = Address.builder().line1("address2-1").line2("address2-2").line3("address2-3")
+			.line4("address2-4").postcode("postcode2").build();
 
 	public URI loaduri(String uri) {
 		return URI.create(String.format("http://localhost:%s%s", port, uri));
@@ -51,26 +54,24 @@ public class UserApiTest {
 	@BeforeEach
 	public void loadUser() {
 		headers.setContentType(MediaType.APPLICATION_JSON);
-		user.setName("UserName");
+		user.setName(name);
 		user.setBirthdate(LocalDate.of(1900, 11, 12));
 		user.setEmail("Test@gmail.com");
-		user.setAddress("address details");
+		user.setAddress(List.of(address1, address2));
 
 	}
 
 	@Test
 	@Order(1)
 	public void whenValidUser_create() {
-		final ResponseEntity<Object> reply = restTempWithAdmin.exchange
-				(loaduri("/users"), HttpMethod.POST, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.POST,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.CREATED.value(), reply.getStatusCode().value());
 		Assert.assertNotNull(reply.getHeaders().getLocation());
 
-
-		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange
-				(loaduri("/users"), HttpMethod.POST, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users"), HttpMethod.POST,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
-
 
 	}
 
@@ -78,12 +79,12 @@ public class UserApiTest {
 	@Order(5)
 	public void whenValidUser_deleteUsers() {
 
-		final ResponseEntity<Object> reply = restTempWithAdmin.exchange
-				(loaduri("/users/1"), HttpMethod.DELETE, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.DELETE,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.NO_CONTENT.value(), reply.getStatusCode().value());
 
-		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange
-				(loaduri("/users/1"), HttpMethod.DELETE, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.DELETE,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -91,27 +92,42 @@ public class UserApiTest {
 	@Test
 	@Order(3)
 	public void whenValidUser_retriveAllUsers() {
-		final ResponseEntity<Object> reply = restTempWithAdmin.exchange
-				(loaduri("/users"), HttpMethod.GET, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
 
-		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange
-				(loaduri("/users"), HttpMethod.GET, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
+	}
 
+	@Test
+	@Order(6)
+	public void whenValidUser_retriveAllUsersWithFilterAndVersion() {
+		// String url = String.format("http://localhost:%s%s", port, "/v1/users");
+		// URI uri =UriComponentsBuilder.fromHttpUrl(url).queryParam("",
+		// "").queryParam("", "").build().toUri();
+
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/v1/users"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
+
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/v1/users"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
 	}
 
 	@Test
 	@Order(2)
 	public void whenValidUser_retriveOneUsers() {
-		final ResponseEntity<Object> reply = restTempWithAdmin.exchange
-				(loaduri("/users/1"), HttpMethod.GET, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
 
-		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange
-				(loaduri("/users/1"), HttpMethod.GET, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -119,15 +135,17 @@ public class UserApiTest {
 	@Test
 	@Order(4)
 	public void whenValidUser_updateUsers() {
-		user.setName("updatedName");
-		user.setAddress("address details updated");
+		name.setFirstName("updated-firstName");
+		name.setSecondName("updated-Second");
+		user.setName(name);
+		user.setAddress(List.of(address1, address2));
 
-		final ResponseEntity<Object> reply = restTempWithAdmin.exchange
-				(loaduri("/users/1"), HttpMethod.PUT, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.PUT,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.ACCEPTED.value(), reply.getStatusCode().value());
 
-		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange
-				(loaduri("/users/1"), HttpMethod.PUT, new HttpEntity<>(user, headers), Object.class);
+		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.PUT,
+				new HttpEntity<>(user, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
 
 	}

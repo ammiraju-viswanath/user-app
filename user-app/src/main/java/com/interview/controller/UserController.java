@@ -31,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.interview.model.Address;
+import com.interview.model.Name;
 import com.interview.model.User;
 import com.interview.repo.UserRepo;
 
@@ -67,10 +69,45 @@ public class UserController {
 
 		final var random = new Random();
 		final List<User> users = IntStream.range(1, 501)
-				.mapToObj(i -> User.builder().name("name" + (random.nextInt() % 2 == 0 ? 1 : 3))
-						.birthdate(randomDates.get(i))
-						.email("test" + (random.nextInt() % 3 == 0 ? 5 : 7) + "@gmail.com")
-						.address("address" + +(random.nextInt() % 7 == 0 ? 2 : 4)).build())
+				.mapToObj(i ->
+				{
+					final var name =
+							Name.builder()
+							.firstName("first" + (random.nextInt() % 2 == 0 ? 1 : 3))
+							.secondName("second" + (random.nextInt() % 2 == 0 ? 1 : 3)).build();
+
+					final var address1 = Address.builder()
+							.line1("address1" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line2("address2" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line3("address3" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line4("address4" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.postcode("postcode" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.build();
+
+					final var user1=  User.builder().name(name)
+							.birthdate(randomDates.get(i))
+							.email("test" + (random.nextInt() % 3 == 0 ? 5 : 7) + "@gmail.com")
+							.address(List.of(address1)).build();
+
+
+					final var address2 = Address.builder()
+							.line1("address1" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line2("address2" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line3("address3" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.line4("address4" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.postcode("postcode" + +(random.nextInt() % 7 == 0 ? 2 : 4))
+							.build();
+					address2.setUser(List.of(user1));
+
+					return User.builder().name(name)
+							.birthdate(randomDates.get(i))
+							.email("test" + (random.nextInt() % 3 == 0 ? 5 : 7) + "@gmail.com")
+							.address(List.of(address1, address2)).build();
+
+
+				}
+						)
+
 				.collect(Collectors.toList());
 		userService.saveAll(users);
 
