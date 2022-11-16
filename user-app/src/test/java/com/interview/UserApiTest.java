@@ -62,6 +62,66 @@ public class UserApiTest {
 	}
 
 	@Test
+	@Order(14)
+	public void when_invalid_data_format_shouldFail() {
+		user.setEmail("asdsadsadsad");
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.POST,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.BAD_REQUEST.value(), reply.getStatusCode().value());
+
+	}
+
+	@Test
+	@Order(13)
+	public void when_invalid_format_shouldFail() {
+
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/as"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), reply.getStatusCode().value());
+
+	}
+
+
+
+	@Test
+	@Order(12)
+	public void when_invalid_Id_shouldFail() {
+
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/10000"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
+		final var id = "10000";
+		final var expected =String.format("User with ID as %s  not found", id);
+
+		Assert.assertTrue(reply.getBody().toString().contains(expected));
+
+
+	}
+
+
+
+
+	@Test
+	@Order(15)
+	public void when_invalid_method_call_shouldFail() {
+		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.DELETE,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.METHOD_NOT_ALLOWED.value(), reply.getStatusCode().value());
+
+
+	}
+
+	@Test
+	@Order(11)
+	public void when_invalid_User_shouldFail() {
+		final ResponseEntity<Object> reply = new TestRestTemplate().withBasicAuth("springer1232", "secret").exchange(loaduri("/users"), HttpMethod.GET,
+				new HttpEntity<>(user, headers), Object.class);
+		Assert.assertEquals(HttpStatus.UNAUTHORIZED.value(), reply.getStatusCode().value());
+
+	}
+
+
+
+	@Test
 	@Order(1)
 	public void whenValidUser_create() {
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.POST,
