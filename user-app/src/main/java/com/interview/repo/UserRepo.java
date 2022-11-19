@@ -14,7 +14,7 @@ public interface UserRepo extends JpaRepository<User, Integer> {
 
 
 	@Query(value= "select s.* from user_table s where "
-			+ "s.id like %:keyword% or s.name like %:keyword% or s.address like %:keyword% or s.email like %:keyword%"
+			+ "s.id like %:keyword% or s.name like %:keyword% or  s.email like %:keyword%"
 			, nativeQuery = true)
 	Page<User> findByKeyword(Pageable pageble,  @Param ("keyword") String keyword);
 

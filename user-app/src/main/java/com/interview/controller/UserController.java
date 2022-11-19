@@ -1,17 +1,13 @@
 package com.interview.controller;
 
-import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import javax.annotation.PostConstruct;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +16,10 @@ import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +29,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import com.interview.model.Address;
-import com.interview.model.Name;
+import com.interview.dto.Address;
+import com.interview.dto.UserAddressWrapper;
 import com.interview.model.User;
 import com.interview.repo.UserRepo;
 
@@ -42,12 +43,25 @@ public class UserController {
 	@Autowired
 	UserRepo userService;
 
+	@Autowired
+	RestTemplate template;
 
 	@PostMapping("/users")
-	public ResponseEntity<User> addUser(@Valid @RequestBody User user) {
-		final var userdb = userService.save(user);
+	public ResponseEntity<User> addUser(@Valid @RequestBody UserAddressWrapper userAddress) {
+		final var userdb = userService.save(userAddress.getUser());
+
+		final var userId = userdb.getId();
+		userAddress.getAddress().stream().forEach(address->address.setUserid(userId) );
+		final var headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		userAddress.getAddress().stream().forEach(address-> template
+				.exchange("http://localhost:9090/addresses", HttpMethod.POST,
+						new HttpEntity<>(address, headers), Address.class));
+
+
 		final var location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
-				.buildAndExpand(userdb.getId()).toUri();
+				.buildAndExpand(userId).toUri();
 		return ResponseEntity.created(location).build();
 	}
 
@@ -56,62 +70,27 @@ public class UserController {
 		final var userdb = userService.findById(Integer.parseInt(id))
 				.orElseThrow(() -> new RuntimeException(
 						String.format("User with ID as %s  not found", id)));
+
+		final var headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		final ResponseEntity<List<Address>> addresses = template
+				.exchange("http://localhost:9090/addresses/users/"+ userdb.getId() , HttpMethod.GET,
+						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
+
+		addresses.getBody().forEach(i->
+		template
+		.exchange("http://localhost:9090/addresses/"+ i.getId() , HttpMethod.DELETE,
+				new HttpEntity<>(null, headers), Object.class));
+
+
+
+
 		userService.delete(userdb);
 		return ResponseEntity.noContent().build();
 	}
 
-	@PostConstruct
-	public void loadData() {
 
-		final List<LocalDate> randomDates = LocalDate.of(1900, 1, 1).datesUntil(LocalDate.now()).limit(501)
-				.collect(Collectors.toList());
-		Collections.shuffle(randomDates);
-
-		final var random = new Random();
-		final List<User> users = IntStream.range(1, 501)
-				.mapToObj(i ->
-				{
-					final var name =
-							Name.builder()
-							.firstName("first" + (random.nextInt() % 2 == 0 ? 1 : 3))
-							.secondName("second" + (random.nextInt() % 2 == 0 ? 1 : 3)).build();
-
-					final var address1 = Address.builder()
-							.line1("address1" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line2("address2" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line3("address3" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line4("address4" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.postcode("postcode" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.build();
-
-					final var user1=  User.builder().name(name)
-							.birthdate(randomDates.get(i))
-							.email("test" + (random.nextInt() % 3 == 0 ? 5 : 7) + "@gmail.com")
-							.address(List.of(address1)).build();
-
-
-					final var address2 = Address.builder()
-							.line1("address1" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line2("address2" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line3("address3" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.line4("address4" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.postcode("postcode" + +(random.nextInt() % 7 == 0 ? 2 : 4))
-							.build();
-					address2.setUser(List.of(user1));
-
-					return User.builder().name(name)
-							.birthdate(randomDates.get(i))
-							.email("test" + (random.nextInt() % 3 == 0 ? 5 : 7) + "@gmail.com")
-							.address(List.of(address1, address2)).build();
-
-
-				}
-						)
-
-				.collect(Collectors.toList());
-		userService.saveAll(users);
-
-	}
 
 	@GetMapping("/users")
 	public ResponseEntity<List<User>> retriveAllUser() {
@@ -140,15 +119,29 @@ public class UserController {
 
 
 	@GetMapping("/users/{id}")
-	public ResponseEntity<EntityModel<User>> retriveUserById(@PathVariable String id) {
+	public ResponseEntity<EntityModel<UserAddressWrapper>> retriveUserById(@PathVariable String id) {
 		final var userdb = userService.findById(Integer.parseInt(id))
 				.orElseThrow(() -> new RuntimeException(String.format("User with ID as %s  not found", id)));
+
+
+
+		final var headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+
+		final ResponseEntity<List<Address>> addresses = template
+				.exchange("http://localhost:9090/addresses/users/"+ userdb.getId() , HttpMethod.GET,
+						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
+		final var reply=
+
+				UserAddressWrapper.builder().address(addresses.getBody()).user(userdb).build();
+
+
 
 		final var newLinK = WebMvcLinkBuilder
 				.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).retriveAllUser())
 				.withRel("Additional User info Link");
 
-		return ResponseEntity.ok(EntityModel.of(userdb, newLinK));
+		return ResponseEntity.ok(EntityModel.of(reply, newLinK));
 	}
 
 	@PutMapping("/users/{id}")

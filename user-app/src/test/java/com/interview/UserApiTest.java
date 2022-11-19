@@ -23,7 +23,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.interview.model.Address;
+import com.interview.dto.Address;
+import com.interview.dto.UserAddressWrapper;
 import com.interview.model.Name;
 import com.interview.model.User;
 
@@ -40,6 +41,7 @@ public class UserApiTest {
 	private final TestRestTemplate restTempWithUser = new TestRestTemplate().withBasicAuth("spring", "secret");
 
 	private final HttpHeaders headers = new HttpHeaders();
+	private final UserAddressWrapper userAddress = UserAddressWrapper.builder().build();
 	private final User user = User.builder().build();
 	private final Name name = Name.builder().firstName("firstName").secondName("secondName").build();
 	private final Address address1 = Address.builder().line1("address1-1").line2("address2-1").line3("address3-1")
@@ -57,7 +59,8 @@ public class UserApiTest {
 		user.setName(name);
 		user.setBirthdate(LocalDate.of(1900, 11, 12));
 		user.setEmail("Test@gmail.com");
-		user.setAddress(List.of(address1, address2));
+		userAddress.setUser(user);
+		userAddress.setAddress(List.of(address1, address2));
 
 	}
 
@@ -66,7 +69,7 @@ public class UserApiTest {
 	public void when_invalid_data_format_shouldFail() {
 		user.setEmail("asdsadsadsad");
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.POST,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.BAD_REQUEST.value(), reply.getStatusCode().value());
 
 	}
@@ -76,7 +79,7 @@ public class UserApiTest {
 	public void when_invalid_format_shouldFail() {
 
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/as"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), reply.getStatusCode().value());
 
 	}
@@ -88,7 +91,7 @@ public class UserApiTest {
 	public void when_invalid_Id_shouldFail() {
 
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/10000"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		final var id = "10000";
 		final var expected =String.format("User with ID as %s  not found", id);
 
@@ -104,7 +107,7 @@ public class UserApiTest {
 	@Order(15)
 	public void when_invalid_method_call_shouldFail() {
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.DELETE,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.METHOD_NOT_ALLOWED.value(), reply.getStatusCode().value());
 
 
@@ -114,7 +117,7 @@ public class UserApiTest {
 	@Order(11)
 	public void when_invalid_User_shouldFail() {
 		final ResponseEntity<Object> reply = new TestRestTemplate().withBasicAuth("springer1232", "secret").exchange(loaduri("/users"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.UNAUTHORIZED.value(), reply.getStatusCode().value());
 
 	}
@@ -125,12 +128,12 @@ public class UserApiTest {
 	@Order(1)
 	public void whenValidUser_create() {
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.POST,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.CREATED.value(), reply.getStatusCode().value());
 		Assert.assertNotNull(reply.getHeaders().getLocation());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users"), HttpMethod.POST,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -140,11 +143,11 @@ public class UserApiTest {
 	public void whenValidUser_deleteUsers() {
 
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.DELETE,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.NO_CONTENT.value(), reply.getStatusCode().value());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.DELETE,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -153,11 +156,11 @@ public class UserApiTest {
 	@Order(3)
 	public void whenValidUser_retriveAllUsers() {
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -170,11 +173,11 @@ public class UserApiTest {
 		// "").queryParam("", "").build().toUri();
 
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/v1/users"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/v1/users"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -183,11 +186,11 @@ public class UserApiTest {
 	@Order(2)
 	public void whenValidUser_retriveOneUsers() {
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), reply.getStatusCode().value());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.GET,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.OK.value(), replyWithUser.getStatusCode().value());
 
 	}
@@ -198,14 +201,16 @@ public class UserApiTest {
 		name.setFirstName("updated-firstName");
 		name.setSecondName("updated-Second");
 		user.setName(name);
-		user.setAddress(List.of(address1, address2));
+		userAddress.setUser(user);
+		userAddress.setAddress(List.of(address1, address2));
+
 
 		final ResponseEntity<Object> reply = restTempWithAdmin.exchange(loaduri("/users/1"), HttpMethod.PUT,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.ACCEPTED.value(), reply.getStatusCode().value());
 
 		final ResponseEntity<Object> replyWithUser = restTempWithUser.exchange(loaduri("/users/1"), HttpMethod.PUT,
-				new HttpEntity<>(user, headers), Object.class);
+				new HttpEntity<>(userAddress, headers), Object.class);
 		Assert.assertEquals(HttpStatus.FORBIDDEN.value(), replyWithUser.getStatusCode().value());
 
 	}
