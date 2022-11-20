@@ -56,7 +56,7 @@ public class UserController {
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		userAddress.getAddress().stream().forEach(address-> template
-				.exchange("http://localhost:9090/addresses", HttpMethod.POST,
+				.exchange("http://ADDRESS-APP/addresses", HttpMethod.POST,
 						new HttpEntity<>(address, headers), Address.class));
 
 
@@ -75,12 +75,12 @@ public class UserController {
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		final ResponseEntity<List<Address>> addresses = template
-				.exchange("http://localhost:9090/addresses/users/"+ userdb.getId() , HttpMethod.GET,
+				.exchange("http://ADDRESS-APP/addresses/users/"+ userdb.getId() , HttpMethod.GET,
 						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
 
 		addresses.getBody().forEach(i->
 		template
-		.exchange("http://localhost:9090/addresses/"+ i.getId() , HttpMethod.DELETE,
+		.exchange("http://ADDRESS-APP/addresses/"+ i.getId() , HttpMethod.DELETE,
 				new HttpEntity<>(null, headers), Object.class));
 
 
@@ -129,7 +129,7 @@ public class UserController {
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
 		final ResponseEntity<List<Address>> addresses = template
-				.exchange("http://localhost:9090/addresses/users/"+ userdb.getId() , HttpMethod.GET,
+				.exchange("http://ADDRESS-APP/addresses/users/"+ userdb.getId() , HttpMethod.GET,
 						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
 		final var reply=
 

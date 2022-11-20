@@ -2,9 +2,11 @@ package com.interview;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
-
+@EnableEurekaClient
 @SpringBootApplication
 public class UserAppApplication {
 	public static void main(String[] args) {
@@ -12,6 +14,7 @@ public class UserAppApplication {
 	}
 
 	@Bean
+	@LoadBalanced
 	RestTemplate loadRestTempolate() {
 		return new RestTemplate();
 	}
