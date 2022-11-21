@@ -45,52 +45,45 @@ public class UserController {
 
 	@Autowired
 	RestTemplate template;
+	@Autowired
+	AddressFeignInterface feignClient;
 
 	@PostMapping("/users")
 	public ResponseEntity<User> addUser(@Valid @RequestBody UserAddressWrapper userAddress) {
 		final var userdb = userService.save(userAddress.getUser());
 
 		final var userId = userdb.getId();
-		userAddress.getAddress().stream().forEach(address->address.setUserid(userId) );
-		final var headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		userAddress.getAddress().stream().forEach(address-> template
-				.exchange("http://ADDRESS-APP/addresses", HttpMethod.POST,
-						new HttpEntity<>(address, headers), Address.class));
+		userAddress.getAddress().stream().forEach(address -> {
+			address.setUserid(userId);
+			feignClient.addAddress(address);
+
+		});
 
 
-		final var location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
-				.buildAndExpand(userId).toUri();
+		final var location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(userId)
+				.toUri();
 		return ResponseEntity.created(location).build();
 	}
 
 	@DeleteMapping("/users/{id}")
 	public ResponseEntity<User> deleteUser(@PathVariable String id) {
 		final var userdb = userService.findById(Integer.parseInt(id))
-				.orElseThrow(() -> new RuntimeException(
-						String.format("User with ID as %s  not found", id)));
+				.orElseThrow(() -> new RuntimeException(String.format("User with ID as %s  not found", id)));
 
 		final var headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		final ResponseEntity<List<Address>> addresses = template
-				.exchange("http://ADDRESS-APP/addresses/users/"+ userdb.getId() , HttpMethod.GET,
-						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
+		final var addresses = feignClient
+				.retriveAllAddressByUserId(userdb.getId().toString());
 
-		addresses.getBody().forEach(i->
-		template
-		.exchange("http://ADDRESS-APP/addresses/"+ i.getId() , HttpMethod.DELETE,
-				new HttpEntity<>(null, headers), Object.class));
-
-
-
+		if (addresses.hasBody()) {
+			addresses.getBody().forEach(address -> feignClient.deleteAddress(address.getId().toString()));
+		}
 
 		userService.delete(userdb);
 		return ResponseEntity.noContent().build();
 	}
-
-
 
 	@GetMapping("/users")
 	public ResponseEntity<List<User>> retriveAllUser() {
@@ -104,7 +97,7 @@ public class UserController {
 			@RequestParam(required = false, defaultValue = "id#desc") String[] sortAndOrder,
 			@RequestParam(required = false, defaultValue = "") String searchCriteria) {
 
-		//return ResponseEntity.ok(userService.findAll());
+		// return ResponseEntity.ok(userService.findAll());
 		final List<Order> orders = Arrays.stream(sortAndOrder).filter(s -> s.contains("#")).map(s -> s.split("#"))
 				.map(arr -> new Order(Direction.fromString(arr[1]), arr[0])).collect(Collectors.toList());
 
@@ -116,29 +109,23 @@ public class UserController {
 		return ResponseEntity.ok(data);
 	}
 
-
-
 	@GetMapping("/users/{id}")
 	public ResponseEntity<EntityModel<UserAddressWrapper>> retriveUserById(@PathVariable String id) {
 		final var userdb = userService.findById(Integer.parseInt(id))
 				.orElseThrow(() -> new RuntimeException(String.format("User with ID as %s  not found", id)));
 
-
-
 		final var headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		final ResponseEntity<List<Address>> addresses = template
-				.exchange("http://ADDRESS-APP/addresses/users/"+ userdb.getId() , HttpMethod.GET,
-						new HttpEntity<>(null, headers), new ParameterizedTypeReference<List<Address>>() {});
-		final var reply=
+		final ResponseEntity<List<Address>> addresses = template.exchange(
+				"http://ADDRESS-APP/addresses/users/" + userdb.getId(), HttpMethod.GET, new HttpEntity<>(null, headers),
+				new ParameterizedTypeReference<List<Address>>() {
+				});
+		final var reply =
 
 				UserAddressWrapper.builder().address(addresses.getBody()).user(userdb).build();
 
-
-
-		final var newLinK = WebMvcLinkBuilder
-				.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).retriveAllUser())
+		final var newLinK = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(this.getClass()).retriveAllUser())
 				.withRel("Additional User info Link");
 
 		return ResponseEntity.ok(EntityModel.of(reply, newLinK));
