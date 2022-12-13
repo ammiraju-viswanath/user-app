@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.interview.RabbitConfig;
 import com.interview.dto.Address;
 import com.interview.dto.UserAddressWrapper;
 import com.interview.model.User;
@@ -47,6 +49,8 @@ public class UserController {
 	RestTemplate template;
 	@Autowired
 	AddressFeignInterface feignClient;
+	@Autowired
+	RabbitTemplate rabbitClient;
 
 	@PostMapping("/users")
 	public ResponseEntity<User> addUser(@Valid @RequestBody UserAddressWrapper userAddress) {
@@ -56,7 +60,10 @@ public class UserController {
 
 		userAddress.getAddress().stream().forEach(address -> {
 			address.setUserid(userId);
-			feignClient.addAddress(address);
+			//feignClient.addAddress(address);
+
+			rabbitClient.convertAndSend(RabbitConfig.EXCAHNGE_NAME,
+					RabbitConfig.ROUTING_KEY, address);
 
 		});
 
